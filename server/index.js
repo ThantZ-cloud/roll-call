@@ -112,6 +112,12 @@ app.post("/api/subjects", (req, res) => {
   if (!name) return res.status(400).json({ error: "Subject name required" });
   try {
     const result = run("INSERT INTO subjects (name) VALUES (?)", [name.trim()]);
+
+    // Auto-create folder for this subject
+    const subjectDir = path.join(ROLLCALL_DIR, name.trim());
+    fs.mkdirSync(subjectDir, { recursive: true });
+    console.log(`[Subject] Created folder: ${subjectDir}`);
+
     res.json({ id: result.lastInsertRowid, name: name.trim() });
   } catch (err) {
     if (err.message.includes("UNIQUE")) {
@@ -156,9 +162,20 @@ app.post("/api/sessions", (req, res) => {
   res.json({ id: result.lastInsertRowid, subject_id, date: dateStr, is_active: 1 });
 });
 
-app.patch("/api/sessions/:id/end", (req, res) => {
-  run("UPDATE sessions SET is_active = 0 WHERE id = ?", [parseInt(req.params.id)]);
-  io.emit("session-ended", { session_id: parseInt(req.params.id) });
+app.patch("/api/sessions/:id/end", async (req, res) => {
+  const session_id = parseInt(req.params.id);
+
+  // Close the session
+  run("UPDATE sessions SET is_active = 0 WHERE id = ?", [session_id]);
+  io.emit("session-ended", { session_id });
+
+  // Auto-save Excel to subject folder
+  try {
+    await saveExcelToFilesystem(session_id);
+  } catch (err) {
+    console.error("[Export] Auto-save failed:", err.message);
+  }
+
   res.json({ success: true });
 });
 
@@ -277,12 +294,10 @@ app.post("/api/sessions/:id/manual-add", (req, res) => {
 });
 
 // ──────────────────────────────────────────────
-// EXPORT TO EXCEL
+// EXCEL HELPER + EXPORT
 // ──────────────────────────────────────────────
 
-app.get("/api/sessions/:id/export", async (req, res) => {
-  const session_id = parseInt(req.params.id);
-
+async function buildWorkbook(session_id) {
   const session = queryOne(
     `SELECT s.*, sub.name as subject_name
      FROM sessions s
@@ -290,8 +305,7 @@ app.get("/api/sessions/:id/export", async (req, res) => {
      WHERE s.id = ?`,
     [session_id]
   );
-
-  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (!session) return null;
 
   const submissions = query(
     `SELECT st.name, st.roll_number, sub.submitted_at, sub.method
@@ -344,16 +358,41 @@ app.get("/api/sessions/:id/export", async (req, res) => {
   worksheet.getColumn(3).width = 12;
   worksheet.getColumn(4).width = 12;
 
-  const filename = `${session.date}.xlsx`;
+  return { workbook, session };
+}
 
-  // Save to server filesystem: Roll Call/SubjectName/date.xlsx
+// Save Excel to server filesystem (called on session end)
+async function saveExcelToFilesystem(session_id) {
+  const result = await buildWorkbook(session_id);
+  if (!result) return;
+
+  const { workbook, session } = result;
   const subjectDir = path.join(ROLLCALL_DIR, session.subject_name);
   fs.mkdirSync(subjectDir, { recursive: true });
+
+  const filename = `${session.date}.xlsx`;
   const filePath = path.join(subjectDir, filename);
   await workbook.xlsx.writeFile(filePath);
-  console.log(`[Export] Saved: ${filePath}`);
+  console.log(`[Auto-Export] Saved: ${filePath}`);
+  return filePath;
+}
 
-  // Also send to browser for download
+// Manual export endpoint (also saves + sends to browser)
+app.get("/api/sessions/:id/export", async (req, res) => {
+  const session_id = parseInt(req.params.id);
+  const result = await buildWorkbook(session_id);
+  if (!result) return res.status(404).json({ error: "Session not found" });
+
+  const { workbook, session } = result;
+
+  // Save to filesystem
+  const subjectDir = path.join(ROLLCALL_DIR, session.subject_name);
+  fs.mkdirSync(subjectDir, { recursive: true });
+  const filename = `${session.date}.xlsx`;
+  await workbook.xlsx.writeFile(path.join(subjectDir, filename));
+  console.log(`[Export] Saved: ${path.join(subjectDir, filename)}`);
+
+  // Send to browser
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   await workbook.xlsx.write(res);
