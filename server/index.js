@@ -360,9 +360,16 @@ app.get("/admin", (req, res) => {
 // ──────────────────────────────────────────────
 
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
-  socket.on("disconnect", () => console.log("Client disconnected:", socket.id));
+  console.log("[Socket] Connected:", socket.id);
+  socket.on("disconnect", () => console.log("[Socket] Disconnected:", socket.id));
 });
+
+// Log when emitting events
+const originalEmit = io.emit.bind(io);
+io.emit = function(event, data) {
+  console.log(`[Socket] Emitting '${event}' to ${io.engine.clientsCount} clients:`, JSON.stringify(data).substring(0, 200));
+  return originalEmit(event, data);
+};
 
 // ──────────────────────────────────────────────
 // START

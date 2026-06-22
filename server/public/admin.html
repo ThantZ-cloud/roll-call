@@ -321,7 +321,7 @@
 
   <!-- Top Bar -->
   <div class="topbar">
-    <h1>🌸 Roll Call Admin</h1>
+    <h1>🌸 Roll Call Admin <span id="connStatus" style="font-size:12px; margin-left:8px; padding:3px 8px; border-radius:10px; background:rgba(244,67,54,0.3); color:#ef9a9a;">● Connecting...</span></h1>
     <div class="ip-badge" id="ipBadge">Loading...</div>
   </div>
 
@@ -424,12 +424,40 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const socket = io();
+    // Socket.io with explicit URL to ensure correct connection
+    const socket = io(window.location.origin, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
+
     let subjects = [];
     let students = [];
     let currentSubject = null;
     let currentSession = null;
     let submissions = [];
+
+    // Connection status
+    const connStatus = document.getElementById('connStatus');
+    socket.on('connect', () => {
+      console.log('[Admin] Socket connected:', socket.id);
+      connStatus.textContent = '● Live';
+      connStatus.style.background = 'rgba(76,175,80,0.3)';
+      connStatus.style.color = '#a5d6a7';
+    });
+    socket.on('disconnect', () => {
+      console.log('[Admin] Socket disconnected');
+      connStatus.textContent = '● Offline';
+      connStatus.style.background = 'rgba(244,67,54,0.3)';
+      connStatus.style.color = '#ef9a9a';
+    });
+    socket.on('connect_error', (err) => {
+      console.error('[Admin] Connection error:', err.message);
+      connStatus.textContent = '● Error';
+      connStatus.style.background = 'rgba(244,67,54,0.3)';
+      connStatus.style.color = '#ef9a9a';
+    });
 
     // ── Init ────────────────────────────
     async function init() {
@@ -628,16 +656,19 @@
 
     // Socket: real-time updates
     socket.on('new-submission', (data) => {
+      console.log('[Admin] Received new-submission:', data);
+      console.log('[Admin] Current session:', currentSession);
       if (currentSession && data.session_id === currentSession.id) {
-        // Check if already in list
         if (!submissions.find(s => s.student_id === data.student_id)) {
           submissions.push(data);
           renderSubmissions();
+          toast(`${data.name} checked in!`, 'success');
         }
       }
     });
 
     socket.on('session-ended', (data) => {
+      console.log('[Admin] Session ended:', data);
       if (currentSession && data.session_id === currentSession.id) {
         currentSession = null;
         document.getElementById('liveCard').style.display = 'none';
