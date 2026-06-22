@@ -217,13 +217,15 @@ app.post("/api/sessions/:id/submit", (req, res) => {
 
     const student = queryOne("SELECT name, roll_number FROM students WHERE id = ?", [student_id]);
 
-    io.emit("new-submission", {
+    const submissionData = {
       session_id,
       student_id,
       name: student.name,
       roll_number: student.roll_number,
       submitted_at: new Date().toISOString(),
-    });
+    };
+    console.log("[Server] Emitting new-submission:", JSON.stringify(submissionData));
+    io.emit("new-submission", submissionData);
 
     res.json({ success: true, message: "Attendance submitted!" });
   } catch (err) {
@@ -360,16 +362,11 @@ app.get("/admin", (req, res) => {
 // ──────────────────────────────────────────────
 
 io.on("connection", (socket) => {
-  console.log("[Socket] Connected:", socket.id);
-  socket.on("disconnect", () => console.log("[Socket] Disconnected:", socket.id));
+  console.log("[Socket] Client connected:", socket.id, "— Total:", io.engine.clientsCount);
+  socket.on("disconnect", () => {
+    console.log("[Socket] Client disconnected:", socket.id);
+  });
 });
-
-// Log when emitting events
-const originalEmit = io.emit.bind(io);
-io.emit = function(event, data) {
-  console.log(`[Socket] Emitting '${event}' to ${io.engine.clientsCount} clients:`, JSON.stringify(data).substring(0, 200));
-  return originalEmit(event, data);
-};
 
 // ──────────────────────────────────────────────
 // START

@@ -598,6 +598,8 @@
       toast('Roll call started!', 'success');
     }
 
+    let pollInterval = null;
+
     function showLiveSession() {
       document.getElementById('liveCard').style.display = 'block';
       document.getElementById('startBtn').style.display = 'none';
@@ -605,12 +607,30 @@
       renderSubmissions();
       loadSubmissions();
       loadStudentsForManual();
+      // Auto-poll every 2 seconds as live backup
+      startPolling();
+    }
+
+    function startPolling() {
+      stopPolling();
+      pollInterval = setInterval(async () => {
+        if (!currentSession) return;
+        await loadSubmissions();
+      }, 2000);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
     }
 
     async function endRollCall() {
       if (!currentSession) return;
       if (!confirm('End this roll call?')) return;
 
+      stopPolling();
       await fetch(`/api/sessions/${currentSession.id}/end`, { method: 'PATCH' });
       currentSession = null;
       document.getElementById('liveCard').style.display = 'none';
@@ -623,7 +643,16 @@
     async function loadSubmissions() {
       if (!currentSession) return;
       const res = await fetch(`/api/sessions/${currentSession.id}/submissions`);
-      submissions = await res.json();
+      const newData = await res.json();
+
+      // Detect new students and show toast
+      if (newData.length > submissions.length) {
+        const existingIds = new Set(submissions.map(s => s.student_id));
+        const newStudents = newData.filter(s => !existingIds.has(s.student_id));
+        newStudents.forEach(s => toast(`${s.name} checked in!`, 'success'));
+      }
+
+      submissions = newData;
       renderSubmissions();
     }
 
@@ -654,10 +683,9 @@
       return d.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Socket: real-time updates
+    // Socket: real-time updates (adds instantly, polling is backup)
     socket.on('new-submission', (data) => {
-      console.log('[Admin] Received new-submission:', data);
-      console.log('[Admin] Current session:', currentSession);
+      console.log('[Admin] Socket received:', data);
       if (currentSession && data.session_id === currentSession.id) {
         if (!submissions.find(s => s.student_id === data.student_id)) {
           submissions.push(data);
@@ -670,6 +698,7 @@
     socket.on('session-ended', (data) => {
       console.log('[Admin] Session ended:', data);
       if (currentSession && data.session_id === currentSession.id) {
+        stopPolling();
         currentSession = null;
         document.getElementById('liveCard').style.display = 'none';
         document.getElementById('startBtn').style.display = 'inline-block';
