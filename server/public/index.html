@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🌸 Roll Call ❄️</title>
+  <style>
+    /* ── Reset & Base ─────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
+      /* Pyin Oo Lwin misty mountain sky */
+      background: linear-gradient(180deg,
+        #1a1a2e 0%,
+        #16213e 20%,
+        #0f3460 40%,
+        #3a7ca5 60%,
+        #e8d5b7 80%,
+        #f5e6d3 100%);
+      color: #fff;
+    }
+
+    /* ── Falling Particles Container ──────── */
+    .particles {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    /* ── Cherry Blossom Petals 🌸 ─────────── */
+    .petal {
+      position: absolute;
+      top: -40px;
+      opacity: 0.8;
+      animation: fall linear infinite;
+    }
+
+    .petal::before {
+      content: '';
+      display: block;
+      width: 12px;
+      height: 12px;
+      background: radial-gradient(ellipse at center,
+        #ffb7c5 0%,
+        #ff8fa3 40%,
+        #ff6b8a 100%);
+      border-radius: 50% 0 50% 50%;
+      transform: rotate(45deg);
+      box-shadow: 0 0 6px rgba(255, 139, 163, 0.5);
+    }
+
+    .petal:nth-child(odd)::before {
+      width: 10px;
+      height: 10px;
+      background: radial-gradient(ellipse at center,
+        #ffc2d1 0%,
+        #ffb3c6 50%,
+        #ff8fab 100%);
+    }
+
+    .petal:nth-child(3n)::before {
+      width: 14px;
+      height: 14px;
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(-10vh) rotate(0deg) translateX(0);
+        opacity: 0;
+      }
+      10% { opacity: 0.8; }
+      90% { opacity: 0.6; }
+      100% {
+        transform: translateY(105vh) rotate(720deg) translateX(80px);
+        opacity: 0;
+      }
+    }
+
+    /* ── Snowflakes ❄️ ────────────────────── */
+    .snowflake {
+      position: absolute;
+      top: -20px;
+      color: #fff;
+      font-size: 14px;
+      opacity: 0.7;
+      animation: snowfall linear infinite;
+      text-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
+    }
+
+    .snowflake:nth-child(even) { opacity: 0.5; font-size: 10px; }
+    .snowflake:nth-child(3n) { opacity: 0.9; font-size: 18px; }
+
+    @keyframes snowfall {
+      0% {
+        transform: translateY(-10vh) rotate(0deg) translateX(0);
+        opacity: 0;
+      }
+      10% { opacity: 0.7; }
+      90% { opacity: 0.5; }
+      100% {
+        transform: translateY(105vh) rotate(360deg) translateX(-50px);
+        opacity: 0;
+      }
+    }
+
+    /* ── Mist Effect ──────────────────────── */
+    .mist {
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100%; height: 40%;
+      background: linear-gradient(0deg,
+        rgba(255,255,255,0.15) 0%,
+        transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+      animation: mistDrift 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes mistDrift {
+      0% { transform: translateX(-20px); opacity: 0.3; }
+      100% { transform: translateX(20px); opacity: 0.5; }
+    }
+
+    /* ── Main Card ────────────────────────── */
+    .container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 40px 30px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      text-align: center;
+    }
+
+    .card h1 {
+      font-size: 28px;
+      margin-bottom: 6px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .card .subtitle {
+      font-size: 14px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 30px;
+    }
+
+    /* ── Select Dropdown ──────────────────── */
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.8);
+    }
+
+    .select-wrapper {
+      position: relative;
+    }
+
+    .select-wrapper select {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      appearance: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .select-wrapper select:focus {
+      border-color: #ffb7c5;
+      box-shadow: 0 0 16px rgba(255,183,197,0.3);
+    }
+
+    .select-wrapper select option {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 10px;
+    }
+
+    .select-wrapper::after {
+      content: '▾';
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255,255,255,0.6);
+      pointer-events: none;
+      font-size: 18px;
+    }
+
+    /* ── Roll Display ─────────────────────── */
+    .roll-display {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.6);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .roll-display.has-value {
+      color: #fff;
+      border-color: #ffb7c5;
+      background: rgba(255,183,197,0.1);
+    }
+
+    /* ── Submit Button ────────────────────── */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff8fa3, #ff6b8a);
+      color: #fff;
+      margin-top: 10px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px rgba(255,107,138,0.4);
+      letter-spacing: 1px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(255,107,138,0.5);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      background: rgba(255,255,255,0.2);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ── Messages ─────────────────────────── */
+    .message {
+      padding: 14px;
+      border-radius: 12px;
+      margin-top: 16px;
+      font-size: 15px;
+      display: none;
+    }
+
+    .message.success {
+      display: block;
+      background: rgba(76,175,80,0.2);
+      border: 1px solid rgba(76,175,80,0.4);
+      color: #a5d6a7;
+    }
+
+    .message.error {
+      display: block;
+      background: rgba(244,67,54,0.2);
+      border: 1px solid rgba(244,67,54,0.4);
+      color: #ef9a9a;
+    }
+
+    .message.ended {
+      display: block;
+      background: rgba(255,152,0,0.2);
+      border: 1px solid rgba(255,152,0,0.4);
+      color: #ffcc80;
+    }
+
+    /* ── Already submitted screen ─────────── */
+    .submitted-screen {
+      display: none;
+      text-align: center;
+    }
+
+    .submitted-screen .checkmark {
+      font-size: 64px;
+      margin-bottom: 16px;
+      animation: bounceIn 0.6s ease;
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .submitted-screen h2 {
+      font-size: 22px;
+      margin-bottom: 8px;
+    }
+
+    .submitted-screen p {
+      color: rgba(255,255,255,0.7);
+    }
+
+    /* ── No Active Session ────────────────── */
+    .no-session {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .no-session .emoji { font-size: 48px; margin-bottom: 16px; }
+    .no-session p { color: rgba(255,255,255,0.7); font-size: 15px; }
+
+    /* ── Footer ───────────────────────────── */
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.4);
+    }
+
+    /* ── Loading Spinner ──────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Mobile adjustments ───────────────── */
+    @media (max-width: 480px) {
+      .card { padding: 30px 20px; }
+      .card h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Falling particles -->
+  <div class="particles" id="particles"></div>
+  <div class="mist"></div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="card">
+      <!-- Form Screen -->
+      <div id="formScreen">
+        <h1>🌸 Roll Call ❄️</h1>
+        <p class="subtitle">Pyin Oo Lwin YCC</p>
+
+        <!-- Session Info -->
+        <div id="sessionInfo" style="display:none; margin-bottom: 20px;">
+          <span id="sessionSubject" style="font-size: 13px; color: #ffb7c5;"></span>
+        </div>
+
+        <!-- No active session -->
+        <div id="noSession" class="no-session" style="display:none;">
+          <div class="emoji">😴</div>
+          <p>No active roll call right now.<br>Wait for your EC to start one.</p>
+        </div>
+
+        <!-- Student Select -->
+        <div id="selectArea" style="display:none;">
+          <div class="form-group">
+            <label>Select your name</label>
+            <div class="select-wrapper">
+              <select id="studentSelect">
+                <option value="">-- Choose your name --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Roll Number</label>
+            <div class="roll-display" id="rollDisplay">Auto-filled</div>
+          </div>
+
+          <button class="btn-submit" id="submitBtn" disabled>
+            ✅ Submit Attendance
+          </button>
+        </div>
+
+        <div class="message" id="message"></div>
+      </div>
+
+      <!-- Submitted Screen -->
+      <div id="submittedScreen" class="submitted-screen">
+        <div class="checkmark">✅</div>
+        <h2>Attendance Submitted!</h2>
+        <p>Have a nice class 🌸</p>
+        <p style="margin-top: 8px; font-size: 13px; color: rgba(255,255,255,0.5);">
+          You can close this page now.
+        </p>
+      </div>
+
+      <div class="footer">
+        ❄️ Pyin Oo Lwin Weather Vibes 🌸
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ── Generate falling particles ─────────
+    (function createParticles() {
+      const container = document.getElementById('particles');
+
+      // Cherry blossom petals
+      for (let i = 0; i < 25; i++) {
+        const petal = document.createElement('div');
+        petal.className = 'petal';
+        petal.style.left = Math.random() * 100 + '%';
+        petal.style.animationDuration = (6 + Math.random() * 8) + 's';
+        petal.style.animationDelay = Math.random() * 10 + 's';
+        container.appendChild(petal);
+      }
+
+      // Snowflakes
+      const snowChars = ['❄', '❅', '❆', '✦', '•'];
+      for (let i = 0; i < 20; i++) {
+        const snow = document.createElement('div');
+        snow.className = 'snowflake';
+        snow.textContent = snowChars[Math.floor(Math.random() * snowChars.length)];
+        snow.style.left = Math.random() * 100 + '%';
+        snow.style.animationDuration = (8 + Math.random() * 10) + 's';
+        snow.style.animationDelay = Math.random() * 12 + 's';
+        container.appendChild(snow);
+      }
+    })();
+
+    // ── App Logic ──────────────────────────
+    const socket = io();
+    let currentSession = null;
+    let students = [];
+
+    const studentSelect = document.getElementById('studentSelect');
+    const rollDisplay = document.getElementById('rollDisplay');
+    const submitBtn = document.getElementById('submitBtn');
+    const message = document.getElementById('message');
+    const formScreen = document.getElementById('formScreen');
+    const submittedScreen = document.getElementById('submittedScreen');
+    const noSession = document.getElementById('noSession');
+    const selectArea = document.getElementById('selectArea');
+    const sessionInfo = document.getElementById('sessionInfo');
+    const sessionSubject = document.getElementById('sessionSubject');
+
+    // Check if already submitted (stored in localStorage)
+    const submittedSessions = JSON.parse(localStorage.getItem('submitted') || '{}');
+
+    // Load students and active session
+    async function init() {
+      try {
+        // Load all students
+        const studentsRes = await fetch('/api/students');
+        students = await studentsRes.json();
+
+        // We need to find which subject has an active session
+        const subjectsRes = await fetch('/api/subjects');
+        const subjects = await subjectsRes.json();
+
+        let activeSession = null;
+        let activeSubject = null;
+
+        for (const subject of subjects) {
+          const sessRes = await fetch(`/api/subjects/${subject.id}/active-session`);
+          const sess = await sessRes.json();
+          if (sess) {
+            activeSession = sess;
+            activeSubject = subject;
+            break;
+          }
+        }
+
+        if (!activeSession) {
+          noSession.style.display = 'block';
+          selectArea.style.display = 'none';
+          return;
+        }
+
+        currentSession = activeSession;
+
+        // Check if already submitted
+        if (submittedSessions[currentSession.id]) {
+          showSubmittedScreen();
+          return;
+        }
+
+        // Show session info
+        sessionInfo.style.display = 'block';
+        sessionSubject.textContent = `📚 ${activeSubject.name} - ${currentSession.date}`;
+
+        // Populate dropdown
+        students.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `${s.name}  (Roll: ${s.roll_number})`;
+          studentSelect.appendChild(opt);
+        });
+
+        selectArea.style.display = 'block';
+
+      } catch (err) {
+        showMessage('error', 'Failed to connect to server. Are you on the right WiFi?');
+      }
+    }
+
+    // Student selected
+    studentSelect.addEventListener('change', () => {
+      const id = parseInt(studentSelect.value);
+      const student = students.find(s => s.id === id);
+      if (student) {
+        rollDisplay.textContent = student.roll_number;
+        rollDisplay.classList.add('has-value');
+        submitBtn.disabled = false;
+      } else {
+        rollDisplay.textContent = 'Auto-filled';
+        rollDisplay.classList.remove('has-value');
+        submitBtn.disabled = true;
+      }
+    });
+
+    // Submit
+    submitBtn.addEventListener('click', async () => {
+      const studentId = parseInt(studentSelect.value);
+      if (!studentId || !currentSession) return;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+      try {
+        const res = await fetch(`/api/sessions/${currentSession.id}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: studentId }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Save to localStorage
+          submittedSessions[currentSession.id] = true;
+          localStorage.setItem('submitted', JSON.stringify(submittedSessions));
+          showSubmittedScreen();
+        } else {
+          showMessage('error', data.error || 'Something went wrong');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '✅ Submit Attendance';
+        }
+      } catch (err) {
+        showMessage('error', 'Network error. Check your WiFi connection.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '✅ Submit Attendance';
+      }
+    });
+
+    // Listen for session end
+    socket.on('session-ended', (data) => {
+      if (currentSession && data.session_id === currentSession.id) {
+        showMessage('ended', 'Roll call has been ended by the EC.');
+        submitBtn.disabled = true;
+      }
+    });
+
+    function showSubmittedScreen() {
+      formScreen.style.display = 'none';
+      submittedScreen.style.display = 'block';
+    }
+
+    function showMessage(type, text) {
+      message.className = `message ${type}`;
+      message.textContent = text;
+    }
+
+    init();
+  </script>
+</body>
+</html>
