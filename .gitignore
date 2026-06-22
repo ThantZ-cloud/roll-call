@@ -7,3 +7,4 @@ dist/
 .DS_Store
 *.apk
 *.ipa
+server/Roll Call/
