@@ -349,6 +349,27 @@ app.get("/api/sessions/:id/export", async (req, res) => {
 });
 
 // ──────────────────────────────────────────────
+// ADMIN AUTH
+// ──────────────────────────────────────────────
+
+// Default admin credentials (change these!)
+const ADMIN_CREDENTIALS = {
+  name: process.env.ADMIN_NAME || "admin",
+  password: process.env.ADMIN_PASSWORD || "admin123",
+};
+
+app.post("/api/admin/login", (req, res) => {
+  const { name, password } = req.body;
+  if (!name || !password) {
+    return res.status(400).json({ error: "Name and password required" });
+  }
+  if (name === ADMIN_CREDENTIALS.name && password === ADMIN_CREDENTIALS.password) {
+    return res.json({ success: true });
+  }
+  return res.status(401).json({ error: "Invalid name or password" });
+});
+
+// ──────────────────────────────────────────────
 // PAGES
 // ──────────────────────────────────────────────
 
