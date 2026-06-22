@@ -319,37 +319,9 @@
 </head>
 <body>
 
-  <!-- ======================== LOGIN SCREEN ======================== -->
-  <div id="loginScreen" style="display:none;">
-    <div class="container" style="display:flex; justify-content:center; align-items:center; min-height:100vh;">
-      <div class="card" style="max-width:380px; margin:0 auto;">
-        <h2 style="font-size:22px; margin-bottom:6px;">Roll Call Admin</h2>
-        <p style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:28px;">Enter your credentials to continue</p>
-
-        <div style="text-align:left; margin-bottom:16px;">
-          <label style="display:block; font-size:13px; color:rgba(255,255,255,0.7); margin-bottom:6px;">Admin Name</label>
-          <input type="text" id="loginName" placeholder="Enter admin name" style="width:100%; padding:14px 16px; font-size:15px; border:1px solid rgba(255,255,255,0.2); border-radius:12px; background:rgba(255,255,255,0.06); color:#fff; outline:none;" />
-        </div>
-
-        <div style="text-align:left; margin-bottom:24px;">
-          <label style="display:block; font-size:13px; color:rgba(255,255,255,0.7); margin-bottom:6px;">Password</label>
-          <input type="password" id="loginPassword" placeholder="Enter password" style="width:100%; padding:14px 16px; font-size:15px; border:1px solid rgba(255,255,255,0.2); border-radius:12px; background:rgba(255,255,255,0.06); color:#fff; outline:none;" />
-        </div>
-
-        <button id="loginBtn" style="width:100%; padding:14px; font-size:15px; font-weight:600; border:none; border-radius:12px; cursor:pointer; background:linear-gradient(135deg,#ff8fa3,#ff6b8a); color:#fff; transition:all 0.3s;">Login</button>
-
-        <div id="loginError" style="display:none; margin-top:14px; padding:12px; border-radius:10px; background:rgba(244,67,54,0.15); border:1px solid rgba(244,67,54,0.3); color:#ef9a9a; font-size:13px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ======================== DASHBOARD (hidden until login) ======================== -->
-  <div id="dashboardScreen" style="display:none;">
-
   <!-- Top Bar -->
   <div class="topbar">
     <h1>Roll Call Admin <span id="connStatus" style="font-size:12px; margin-left:8px; padding:3px 8px; border-radius:10px; background:rgba(244,67,54,0.3); color:#ef9a9a;">● Connecting...</span></h1>
-    <button onclick="logout()" style="padding:6px 14px; border:1px solid rgba(255,255,255,0.2); border-radius:10px; background:transparent; color:rgba(255,255,255,0.7); cursor:pointer; font-size:13px;">Logout</button>
     <div class="ip-badge" id="ipBadge">Loading...</div>
   </div>
 
@@ -449,159 +421,65 @@
       </div>
     </div>
   </div>
-  </div> <!-- end dashboardScreen -->
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // ──────────────────────────────────────────────
-    // LOGIN SYSTEM
-    // ──────────────────────────────────────────────
-    const loginScreen = document.getElementById('loginScreen');
-    const dashboardScreen = document.getElementById('dashboardScreen');
-    const loginBtn = document.getElementById('loginBtn');
-    const loginName = document.getElementById('loginName');
-    const loginPassword = document.getElementById('loginPassword');
-    const loginError = document.getElementById('loginError');
+    // ── Socket.io ────────────────────────
+    const socket = io(window.location.origin, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    });
 
-    // Check if already logged in this session
-    const loggedIn = sessionStorage.getItem('admin_logged_in');
-
-    if (loggedIn) {
-      showDashboard();
-    } else {
-      loginScreen.style.display = 'block';
-    }
-
-    loginBtn.addEventListener('click', doLogin);
-    loginPassword.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-    loginName.addEventListener('keydown', e => { if (e.key === 'Enter') loginPassword.focus(); });
-
-    async function doLogin() {
-      const name = loginName.value.trim();
-      const password = loginPassword.value.trim();
-
-      if (!name || !password) {
-        showLoginError('Please enter both name and password');
-        return;
-      }
-
-      loginBtn.textContent = 'Checking...';
-      loginBtn.disabled = true;
-
-      try {
-        const res = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, password }),
-        });
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-          sessionStorage.setItem('admin_logged_in', 'true');
-          sessionStorage.setItem('admin_name', name);
-          showDashboard();
-        } else {
-          showLoginError(data.error || 'Invalid credentials');
-        }
-      } catch (err) {
-        showLoginError('Cannot connect to server');
-      }
-
-      loginBtn.textContent = 'Login';
-      loginBtn.disabled = false;
-    }
-
-    function showLoginError(msg) {
-      loginError.textContent = msg;
-      loginError.style.display = 'block';
-    }
-
-    function showDashboard() {
-      loginScreen.style.display = 'none';
-      dashboardScreen.style.display = 'block';
-      startDashboard();
-    }
-
-    // ──────────────────────────────────────────────
-    // DASHBOARD (only runs after login)
-    // ──────────────────────────────────────────────
-    let socket;
     let subjects = [];
     let students = [];
     let currentSubject = null;
     let currentSession = null;
     let submissions = [];
-    let connStatus;
+    let pollInterval = null;
 
-    function startDashboard() {
-      // Socket.io
-      socket = io(window.location.origin, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 10,
-      });
+    const connStatus = document.getElementById('connStatus');
 
-      connStatus = document.getElementById('connStatus');
+    socket.on('connect', () => {
+      connStatus.textContent = '● Live';
+      connStatus.style.background = 'rgba(76,175,80,0.3)';
+      connStatus.style.color = '#a5d6a7';
+    });
+    socket.on('disconnect', () => {
+      connStatus.textContent = '● Offline';
+      connStatus.style.background = 'rgba(244,67,54,0.3)';
+      connStatus.style.color = '#ef9a9a';
+    });
 
-      socket.on('connect', () => {
-        console.log('[Admin] Socket connected:', socket.id);
-        connStatus.textContent = '● Live';
-        connStatus.style.background = 'rgba(76,175,80,0.3)';
-        connStatus.style.color = '#a5d6a7';
-      });
-      socket.on('disconnect', () => {
-        console.log('[Admin] Socket disconnected');
-        connStatus.textContent = '● Offline';
-        connStatus.style.background = 'rgba(244,67,54,0.3)';
-        connStatus.style.color = '#ef9a9a';
-      });
-      socket.on('connect_error', (err) => {
-        console.error('[Admin] Connection error:', err.message);
-        connStatus.textContent = '● Error';
-        connStatus.style.background = 'rgba(244,67,54,0.3)';
-        connStatus.style.color = '#ef9a9a';
-      });
-
-      socket.on('new-submission', (data) => {
-        console.log('[Admin] Socket received:', data);
-        if (currentSession && data.session_id === currentSession.id) {
-          if (!submissions.find(s => s.student_id === data.student_id)) {
-            submissions.push(data);
-            renderSubmissions();
-            toast(`${data.name} checked in!`, 'success');
-          }
+    socket.on('new-submission', (data) => {
+      if (currentSession && data.session_id === currentSession.id) {
+        if (!submissions.find(s => s.student_id === data.student_id)) {
+          submissions.push(data);
+          renderSubmissions();
+          toast(`${data.name} checked in!`, 'success');
         }
-      });
+      }
+    });
 
-      socket.on('session-ended', (data) => {
-        console.log('[Admin] Session ended:', data);
-        if (currentSession && data.session_id === currentSession.id) {
-          stopPolling();
-          currentSession = null;
-          document.getElementById('liveCard').style.display = 'none';
-          document.getElementById('startBtn').style.display = 'inline-block';
-          toast('Roll call ended', 'success');
-          if (currentSubject) loadPastSessions(currentSubject.id);
-        }
-      });
+    socket.on('session-ended', (data) => {
+      if (currentSession && data.session_id === currentSession.id) {
+        stopPolling();
+        currentSession = null;
+        document.getElementById('liveCard').style.display = 'none';
+        document.getElementById('startBtn').style.display = 'inline-block';
+        toast('Roll call ended', 'success');
+        if (currentSubject) loadPastSessions(currentSubject.id);
+      }
+    });
 
-      // Enter key support
-      document.getElementById('newSubjectName').addEventListener('keydown', e => {
-        if (e.key === 'Enter') addSubject();
-      });
-      document.getElementById('studentRoll').addEventListener('keydown', e => {
-        if (e.key === 'Enter') addStudent();
-      });
-
-      init();
-    }
     // ── Init ────────────────────────────
     async function init() {
       await loadSubjects();
       await loadStudents();
       document.getElementById('ipBadge').textContent = window.location.host;
     }
+    init();
 
     // ── Tabs ────────────────────────────
     function switchTab(tab) {
@@ -725,8 +603,6 @@
       showLiveSession();
       toast('Roll call started!', 'success');
     }
-
-    let pollInterval = null;
 
     function showLiveSession() {
       document.getElementById('liveCard').style.display = 'block';
@@ -984,12 +860,6 @@
       el.textContent = msg;
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 3000);
-    }
-
-    function logout() {
-      sessionStorage.removeItem('admin_logged_in');
-      sessionStorage.removeItem('admin_name');
-      location.reload();
     }
   </script>
 </body>
