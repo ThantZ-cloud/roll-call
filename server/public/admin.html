@@ -650,12 +650,19 @@
       if (!currentSession) return;
       if (!confirm('End this roll call?')) return;
 
+      const sessionId = currentSession.id;
       stopPolling();
-      await fetch(`/api/sessions/${currentSession.id}/end`, { method: 'PATCH' });
+
+      // End session (server auto-saves Excel to folder)
+      await fetch(`/api/sessions/${sessionId}/end`, { method: 'PATCH' });
+
+      // Auto-download Excel to phone
+      window.location.href = `/api/sessions/${sessionId}/export`;
+
       currentSession = null;
       document.getElementById('liveCard').style.display = 'none';
       document.getElementById('startBtn').style.display = 'inline-block';
-      toast('Roll call ended', 'success');
+      toast('Roll call ended & Excel downloaded!', 'success');
       loadPastSessions(currentSubject.id);
     }
 
