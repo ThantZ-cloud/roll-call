@@ -330,6 +330,7 @@
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('home')">🏠 Home</button>
       <button class="tab-btn" onclick="switchTab('students')">👥 Students</button>
+      <button class="tab-btn" onclick="switchTab('folders')">📁 Folders</button>
     </div>
 
     <!-- ======================== HOME TAB ======================== -->
@@ -420,6 +421,17 @@
         <div id="studentList"></div>
       </div>
     </div>
+
+    <!-- ======================== FOLDERS TAB ======================== -->
+    <div id="tab-folders" class="tab-content">
+      <div class="card">
+        <h2>📁 Roll Call Folders</h2>
+        <p style="font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
+          Excel files saved on server. Send folder to teacher, then delete.
+        </p>
+        <div id="folderList"></div>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -494,6 +506,10 @@
         document.getElementById('tab-students').classList.add('active');
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         loadStudents();
+      } else if (tab === 'folders') {
+        document.getElementById('tab-folders').classList.add('active');
+        document.querySelectorAll('.tab-btn')[2].classList.add('active');
+        loadFolders();
       } else if (tab === 'subject-detail') {
         document.getElementById('tab-subject-detail').classList.add('active');
       }
@@ -850,6 +866,60 @@
         toast(`Added ${data.added} students!`, 'success');
       } catch (err) {
         toast('Invalid JSON format', 'error');
+      }
+    }
+
+    // ── Folders ─────────────────────────
+    async function loadFolders() {
+      const res = await fetch('/api/folders');
+      const folders = await res.json();
+      const list = document.getElementById('folderList');
+
+      if (folders.length === 0) {
+        list.innerHTML = '<div class="empty"><div class="emoji">📁</div><p>No roll call folders yet.<br>Export a roll call to create one.</p></div>';
+        return;
+      }
+
+      list.innerHTML = folders.map(f => `
+        <div class="list-item" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div class="name">📁 ${f.name}</div>
+              <div class="meta">${f.fileCount} file${f.fileCount > 1 ? 's' : ''}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-danger btn-sm" onclick="deleteFolder('${f.name}')">🗑️ Delete</button>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+            ${f.files.map(file => `
+              <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:13px; color:rgba(255,255,255,0.6);">
+                <span>📄 ${file.name}</span>
+                <span>${formatFileSize(file.size)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    async function deleteFolder(subject) {
+      if (!confirm(`Delete "${subject}" folder?\n\nAll Excel files inside will be permanently deleted.`)) return;
+
+      const res = await fetch(`/api/folders/${encodeURIComponent(subject)}`, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (res.ok) {
+        toast(`"${subject}" folder deleted`, 'success');
+        loadFolders();
+      } else {
+        toast(data.error || 'Failed to delete', 'error');
       }
     }
 

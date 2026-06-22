@@ -3,9 +3,13 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 const { initDatabase, query, queryOne, run } = require("./database");
 const ExcelJS = require("exceljs");
 const os = require("os");
+
+// Excel files root folder
+const ROLLCALL_DIR = path.join(__dirname, "Roll Call");
 
 const app = express();
 const server = http.createServer(app);
@@ -340,12 +344,64 @@ app.get("/api/sessions/:id/export", async (req, res) => {
   worksheet.getColumn(3).width = 12;
   worksheet.getColumn(4).width = 12;
 
-  const filename = `${session.subject_name}_${getDateStr()}.xlsx`;
+  const filename = `${session.date}.xlsx`;
+
+  // Save to server filesystem: Roll Call/SubjectName/date.xlsx
+  const subjectDir = path.join(ROLLCALL_DIR, session.subject_name);
+  fs.mkdirSync(subjectDir, { recursive: true });
+  const filePath = path.join(subjectDir, filename);
+  await workbook.xlsx.writeFile(filePath);
+  console.log(`[Export] Saved: ${filePath}`);
+
+  // Also send to browser for download
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
   await workbook.xlsx.write(res);
   res.end();
+});
+
+// ──────────────────────────────────────────────
+// ROLL CALL FOLDERS (server filesystem)
+// ──────────────────────────────────────────────
+
+// List all subject folders and their files
+app.get("/api/folders", (req, res) => {
+  if (!fs.existsSync(ROLLCALL_DIR)) return res.json([]);
+
+  const folders = fs.readdirSync(ROLLCALL_DIR, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => {
+      const folderPath = path.join(ROLLCALL_DIR, d.name);
+      const files = fs.readdirSync(folderPath)
+        .filter(f => f.endsWith('.xlsx'))
+        .map(f => {
+          const stat = fs.statSync(path.join(folderPath, f));
+          return { name: f, size: stat.size, created: stat.mtime };
+        })
+        .sort((a, b) => b.created - a.created);
+      return { name: d.name, files, fileCount: files.length };
+    })
+    .filter(f => f.fileCount > 0);
+
+  res.json(folders);
+});
+
+// Delete a subject folder (after sending to teacher)
+app.delete("/api/folders/:subject", (req, res) => {
+  const subject = decodeURIComponent(req.params.subject);
+  const folderPath = path.join(ROLLCALL_DIR, subject);
+
+  if (!fs.existsSync(folderPath)) {
+    return res.status(404).json({ error: "Folder not found" });
+  }
+
+  // Delete all files in the folder, then the folder itself
+  const files = fs.readdirSync(folderPath);
+  files.forEach(f => fs.unlinkSync(path.join(folderPath, f)));
+  fs.rmdirSync(folderPath);
+
+  console.log(`[Folders] Deleted: ${folderPath}`);
+  res.json({ success: true, deleted: subject });
 });
 
 // ──────────────────────────────────────────────
